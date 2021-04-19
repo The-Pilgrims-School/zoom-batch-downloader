@@ -1,11 +1,19 @@
 import requests 
 import datetime
+import json
+import time
+import os
+
+config = {}
+
+with open('config.json', 'r') as config_file:
+	config = json.load(config_file)
 
 # Put your JWT token that you get from https://marketplace.zoom.us/ here. 
-JWT = '##########'
+JWT = config['jwt']
 
 # Put your USER ID that you get from the API. 
-USERID = '##########'
+USERID = config['user_id']
 
 
 headers = {
@@ -16,12 +24,13 @@ headers = {
 	}
 
 # Put your own download path here, I used an external hard drive so mine will differ from yours
-PATH = '/Volumes/Ext3/Zoom/'
+PATH = config['path']
 
+proxies = config['proxies']
 
 
 def main():
-	for year in range(2018,2022):
+	for year in range(2020,2022):
 		for month in range(1,13):
 			next_month = month + 1
 			next_year = year
@@ -49,7 +58,8 @@ def get_recording(start_date, next_date):
 
 	response = requests.get(
 		url,
-		headers=headers
+		headers=headers,
+		proxies=proxies
 	)
 
 	data = response.json()
@@ -74,13 +84,18 @@ def download_recording(download_url, filename):
 	print(download_url)
 	download_access_url = '{}?access_token={}'.format(download_url, JWT)
 	print(download_access_url)
-	response = requests.get(download_access_url, stream=True)
+	response = requests.get(download_access_url, stream=True, proxies=proxies)
 	local_filename = '{}{}.mp4'.format(PATH, filename)
 
-	with open(local_filename, 'wb') as f:
-		for chunk in response.iter_content(chunk_size=8192):
-			print (len(chunk))
-			f.write(chunk)
+	if not os.path.isfile(local_filename):
+
+		with open(local_filename, 'wb') as f:
+			for chunk in response.iter_content(chunk_size=8192):
+				print (len(chunk))
+				f.write(chunk)
+	else:
+		print(local_filename + " already exists")
+		time.sleep(5)
 
 	   
 if __name__ == '__main__':
